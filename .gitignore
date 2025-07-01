@@ -1,4 +1,6 @@
 .vscode
 work/
-Modelsim/Scripts/work/
-Modelsim/generated_tbs/
+Modelsim/Scripts/work
+Modelsim/Scripts/*.vcd
+Modelsim/Scripts/transcript
+Modelsim/generated_tbs
