@@ -1,7 +1,7 @@
 # vsim -voptargs="+acc" -c work.tbench_top -do "run -all; exit" 
-# Start time: 17:58:42 on Jun 30,2025
+# Start time: 13:27:25 on Jul 01,2025
 # ** Note: (vsim-3812) Design is being optimized...
-# //  ModelSim SE-64 2019.4 Oct 15 2019 Linux 6.6.87.2-microsoft-standard-WSL2
+# //  ModelSim SE-64 2019.4 Oct 15 2019 Linux 5.15.167.4-microsoft-standard-WSL2
 # //
 # //  Copyright 1991-2019 Mentor Graphics Corporation
 # //  All Rights Reserved.
@@ -17,10 +17,11 @@
 # Loading sv_std.std
 # Loading work.testbench_sv_unit(fast)
 # Loading work.tbench_top(fast)
-# Loading work.verified_accu_intf(fast)
+# Loading work.verified_adder_8bit_intf(fast)
 # Loading work.test(fast)
-# Loading work.verified_accu(fast)
-# Loading work.verified_accu_intf(fast)
+# Loading work.verified_adder_8bit(fast)
+# Loading work.full_adder(fast)
+# Loading work.verified_adder_8bit_intf(fast)
 # run -all
 # --------- [DRIVER] Reset Started ---------
 # --------- [DRIVER] Reset Ended ---------
@@ -2024,7 +2025,7 @@
 # -----------------------------------------
 # --------- [Trans] post_randomize ------
 # -----------------------------------------
-# ** Note: $finish    : ../generated_tbs/verified_accu/tb/environment.sv(54)
+# ** Note: $finish    : ../generated_tbs/verified_adder_8bit/tb/environment.sv(54)
 #    Time: 10 us  Iteration: 1  Instance: /tbench_top/t1
-# End time: 17:58:42 on Jun 30,2025, Elapsed time: 0:00:00
+# End time: 13:27:25 on Jul 01,2025, Elapsed time: 0:00:00
 # Errors: 0, Warnings: 0

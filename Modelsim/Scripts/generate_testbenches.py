@@ -2,9 +2,19 @@
 import os
 import re
 import sys
+  
+  
+class Port:
+    def __init__(self, name, width='', direction=''):
+        self.name = name
+        self.width = width
+        self.direction = direction
 
+    def __repr__(self):
+        return f"Port(name={self.name}, width={self.width}, direction={self.direction})"
+  
 # --- Configuration ---
-DESIGN_PATH = '../rtl/Arithmetic/Accumulator/accu/verified_accu.v'  # Folder containing RTL designs relative to RTL_DIR
+DESIGN_PATH = '../rtl/Arithmetic/Adder/adder_8bit/verified_adder_8bit.v'  # Folder containing RTL designs relative to RTL_DIR
 TEMPLATES_DIR = '../tb_templates'
 GENERATED_TBS_DIR = '../generated_tbs'
 
@@ -32,31 +42,30 @@ def parse_verilog_module_regex(filepath):
 
     port_list_str = port_list_match.group(1)
 
-    # Split by comma and process each port declaration
-    ports_raw = [p.strip() for p in port_list_str.split(',')]
-
-    for port_decl in ports_raw:
-        if not port_decl:
-            continue
-
-        # Regex to capture direction, optional type/signed, optional width, and name
-        match = re.search(r'(input|output|inout)\s*(reg|wire|logic)?\s*(signed)?\s*(\[\s*\d+\s*:\s*\d+\s*\])?\s*(\w+)', port_decl)
-        if match:
-            direction = match.group(1)
-            width = match.group(4) if match.group(4) else ''
-            name = match.group(5)
-            width = re.sub(r'\s+', '', width) if width else ''
-
-            port_data = {'name': name, 'width': width}
+    port_list_elements = re.split('[ \s|,\s]+', port_list_str)
+    
+    for match_str in port_list_elements:
+        if "input" in match_str or "output" in match_str or "inout" in match_str:
+            direction = match_str 
+            width = ''  # Reset width for new direction
+            
+        elif match_str.startswith('[') and match_str.endswith(']'):
+            # This is a width declaration, e.g., [3:0]
+            width = match_str
+        
+        elif re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', match_str):
+            # This is a port name
+            port_data = {'name': match_str, 'width': width if 'width' in locals() else '', 'direction': direction if 'direction' in locals() else ''}
             if direction == 'input':
                 module_info['inputs'].append(port_data)
             elif direction == 'output':
                 module_info['outputs'].append(port_data)
             elif direction == 'inout':
                 module_info['inouts'].append(port_data)
+            # Reset width and direction for next port
         else:
-            print(f"Warning: Could not parse port declaration: '{port_decl}' in {filepath}. Skipping.")
-
+            continue  # Skip any unmatched strings
+        
     return module_info
 
 # --- SystemVerilog Testbench Generation ---
@@ -161,7 +170,7 @@ def generate_testbench(module_info, template_content):
     #--Write each tb file in GENERATED_TBS_DIR--
     output_filepath = os.path.join(GENERATED_TBS_DIR, f"{module_name}")
     tb_output_filepath = os.path.join(output_filepath, "tb")
-    os.makedirs(output_filepath, exist_ok=True)
+    os.makedirs(tb_output_filepath, exist_ok=True)
     print(f"INFO: Writing testbench files to '{output_filepath}'")
     try:
         driver_filepath = os.path.join(tb_output_filepath, f"driver.sv")
@@ -230,38 +239,59 @@ def generate_testbench(module_info, template_content):
         return
     
     
+    # Extract the module definition from the RTL file
+    module_start_match = re.search(rf'module\s+{module_name}\s*\(.*?\);', rtl_content, re.DOTALL)
+    module_end_match = re.search(r'endmodule', rtl_content)
+
+    if module_start_match and module_end_match:
+        module_start_index = module_start_match.start()
+        module_end_index = module_end_match.end()
+        module_text = rtl_content[module_start_index:module_end_index]
+        # Save the header and tail of the module
+        file_header = rtl_content[:module_start_index]
+        file_tail = rtl_content[module_end_index:]
+    else:
+        print(f"ERROR: Could not extract module definition for '{module_name}' from RTL file.")
+        return
+    
     
     
     
     # Replace input/output port declaration with {module_name}_intf intf in RTL file
-    rtl_content = re.sub(
-        r'(module\s+\w+\s*\([^)]*\);)',
+    module_text = re.sub(
+        rf'(module\s+{module_name}\s*\([^)]*\);)',
         rf'module {module_name} ({module_name}_intf intf);',
-        rtl_content,
+        module_text,
         flags=re.DOTALL
     )
   
     # Replace all input/output port references with intf.{port_name}
     for p in module_info['inputs'] + module_info['outputs']:
+        
         repl = f'intf.{p["name"]}'
+        
         if "rst" in p["name"]:
             repl = f'intf.rst'
-        rtl_content = re.sub(
-            rf'\b{p["name"]}\b',
+            
+        module_text = re.sub(
+            rf'(?<!\.)\b{p["name"]}\b',
             repl,
-            rtl_content
+            module_text
         )
     
     #Remove any timescale directive from the RTL file
-    rtl_content = re.sub(r'`timescale\s+\d+\w+/\d+\w+', '', rtl_content)
+    module_text = re.sub(r'`timescale\s+\d+\w+/\d+\w+', '', module_text)
+    
+    complete_rtl_content = file_header + module_text + file_tail
+    
     
     # Write the modified RTL content back to the file
     
     rtl_output_filepath = os.path.join(output_filepath, "rtl")
-    
+    os.makedirs(rtl_output_filepath, exist_ok=True)
     try:
         with open(rtl_output_filepath + f"/{module_name}.sv", 'w') as f:
-            f.write(rtl_content)
+            f.write(complete_rtl_content)
         print(f"INFO: Updated RTL file '{rtl_output_filepath + f'{module_name}.sv'}' with interface declaration.")
     except Exception as e:
         print(f"ERROR: Failed to write updated RTL file '{rtl_output_filepath + f'{module_name}.sv'}'. Exception: {e}")
