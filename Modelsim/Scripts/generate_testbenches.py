@@ -14,7 +14,7 @@ class Port:
         return f"Port(name={self.name}, width={self.width}, direction={self.direction})"
   
 # --- Configuration ---
-DESIGN_PATH = '../rtl/Arithmetic/Adder/adder_8bit/verified_adder_8bit.v'  # Folder containing RTL designs relative to RTL_DIR
+DESIGN_PATH = '../rtl/Arithmetic/Comparator/comparator_3bit/verified_comparator_3bit.v'  # Folder containing RTL designs relative to RTL_DIR
 TEMPLATES_DIR = '../tb_templates'
 GENERATED_TBS_DIR = '../generated_tbs'
 
@@ -48,14 +48,16 @@ def parse_verilog_module_regex(filepath):
         if "input" in match_str or "output" in match_str or "inout" in match_str:
             direction = match_str 
             width = ''  # Reset width for new direction
+            type_str = ''  # Reset type for new direction
             
         elif match_str.startswith('[') and match_str.endswith(']'):
             # This is a width declaration, e.g., [3:0]
             width = match_str
-        
+        elif "reg" in match_str or "wire" in match_str:
+            type_str = match_str + " "
         elif re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', match_str):
             # This is a port name
-            port_data = {'name': match_str, 'width': width if 'width' in locals() else '', 'direction': direction if 'direction' in locals() else ''}
+            port_data = {'name': match_str, 'width': width if 'width' in locals() else '', 'type_str': type_str if 'type_str' in locals() else '' , 'direction': direction if 'direction' in locals() else ''}
             if direction == 'input':
                 module_info['inputs'].append(port_data)
             elif direction == 'output':
@@ -111,7 +113,7 @@ def generate_testbench(module_info, template_content):
         if p['name'] == 'clk' or 'rst' in p['name']:
             continue
         input_signals_decl_str += f"{p['name']},"
-        logic_signals_decl_str += f"  logic {p['width']} {p['name']};\n"
+        logic_signals_decl_str += f" logic {p['width']} {p['name']};\n"
         
     input_signals_decl_str += f"clk, rst,\n"
     input_signals_decl_str = input_signals_decl_str.rstrip(',\n')
@@ -120,7 +122,7 @@ def generate_testbench(module_info, template_content):
         output_signals_decl_str += f"{p['name']},"
         if p['name'] == 'clk' or 'rst' in p['name']:
             continue
-        logic_signals_decl_str += f"  logic {p['width']} {p['name']};\n"
+        logic_signals_decl_str += f" logic {p['width']} {p['name']};"
     output_signals_decl_str = output_signals_decl_str.rstrip(',')
     
     interface_content = interface_content.replace('@LOGIC_SIGNALS_DECLARATION@', logic_signals_decl_str)

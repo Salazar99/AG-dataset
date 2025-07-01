@@ -1,9 +1,10 @@
-module verified_adder_32bit(A,B,S,C32);
-     input [32:1] A;
-     input [32:1] B;
-     output [32:1] S;
-     output C32;
-
+module verified_adder_32bit(
+      input [32:1] A,
+     input [32:1] B,
+     output [32:1] S,
+     output C32,
+);
+    
      wire px1,gx1,px2,gx2;
      wire c16;
 
